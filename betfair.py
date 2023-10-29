@@ -1,11 +1,17 @@
 import json
+import time
 
 import requests
 import cloudscraper
-scraper = cloudscraper.create_scraper()
+
+import twocaptcha
+
+scraper = cloudscraper.create_scraper(
+
+)
+
 
 def get_ssoid():
-
     data = {
         'product': 'exchange-eds',
         'redirectMethod': 'GET',
@@ -18,12 +24,10 @@ def get_ssoid():
 
     info = scraper.post('https://identitysso.betfair.it/api/login', data=data)
 
-
     return info.cookies.get_dict()
 
 
 def get_betfair_bets(cookies):
-
     headers = {
         'authority': 'myactivity.betfair.it',
         'accept': 'application/json, text/plain, */*',
@@ -55,17 +59,27 @@ def get_betfair_bets(cookies):
 
     response = scraper.post(
         'https://myactivity.betfair.it/activity/exchange/settled',
-        cookies=cookies,
-        headers=headers,
         json=json_data,
     )
-
 
     # update cookies file
     with open("cookies_Betfair.JSON", "w") as f:
         json.dump(cookies, f)
 
-    return response.json()
+    print(response.status_code)
+    print(response.text)
+    import util
+    bets = []
+    for bet in response.json()["bets"]:
+
+        if bet["side"] == "LAY":
+            bet["stake"] = 1 / (1 - 1 / float(bet["odds"])) * float(bet["stake"].replace(",", "."))
+
+        bets.append(
+            util.sheet_bet("Betfair", bet["status"], bet["stake"], bet["odds"], bet["netProfit"], bet["placedDate"],
+                           bet["settledDate"]))
+
+    return bets
 
 
 def main():
@@ -76,8 +90,17 @@ def main():
     try:
         return get_betfair_bets(cookies)
     except Exception as e:
-        cookies = get_ssoid()
-        return get_betfair_bets(cookies)
+        i=0
+        while i<3:
+            try:
+                cookies = get_ssoid()
+                return get_betfair_bets(cookies)
+            except Exception as e:
+                i+=1
+                print("Waiting 60 seconds to retry")
+                time.sleep(60)
+        return []
 
 
-
+if __name__ == '__main__':
+    main()

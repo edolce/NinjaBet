@@ -117,6 +117,10 @@ def get_bets(response=None):
 
     # search tbody tag
     tbody = beautifulSoup.find('table', class_='dgStyle')
+    feedback = []
+    print(tbody)
+
+    import util
 
     # all interno di ogni tr
     for tr in tbody.find_all('tr'):
@@ -125,16 +129,9 @@ def get_bets(response=None):
         for i in range(len(data)):
             data[i] = data[i].strip()
         try:
-            parsed_data = {
-                "identifier": data[0],
-                "AMS": data[1],
-                "type": data[2],
-                "place_date": data[6],
-                "finish_date": data[8],
-                "bet_price": data[9],
-                "bet_reward": data[12],
-                "bet_final_reward": data[13],
-            }
+            parsed_data = util.sheet_bet('planetwin365', data[2], data[9], data[12], data[13], data[6], data[8])
+
+            feedback.append(parsed_data)
         except:
             pass
         # print
@@ -142,8 +139,8 @@ def get_bets(response=None):
     #update cookies in file
     with open('cookies.json', 'w') as outfile:
         json.dump(cookies, outfile)
-
-    return parsed_data
+    print(feedback)
+    return feedback
 
 def main():
     try:
